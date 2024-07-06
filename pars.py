@@ -14,7 +14,6 @@ def schedule_of_teachers(*, link: str, teacher: str)->dict:
         index_day = html_cod.find('<')
         day_of_the_week=html_cod[:index_day]#Понедельник
         cod_of_day=html_cod[:index_h3_next]
-        print(day_of_the_week)
         while '<h4>'in cod_of_day:
             index_h4 = cod_of_day.find('<h4>')
             cod_of_day = cod_of_day[index_h4 + 4:]
@@ -22,13 +21,12 @@ def schedule_of_teachers(*, link: str, teacher: str)->dict:
             index_lesson = cod_of_day.find('<')
             num_of_lesson = cod_of_day[:index_lesson] #5 пара (16:40–18:10)
             cod_of_lesson=cod_of_day[:index_h4_next]
-            up_or_down="верхняя и нижняя"
+            up_or_down=None
             if "title" in cod_of_lesson:
                 index_up_or_down=cod_of_lesson.find('title')+7
                 end_of_index_up_or_down=cod_of_lesson[index_up_or_down:].find('"')
                 up_or_down=cod_of_lesson[index_up_or_down:index_up_or_down+end_of_index_up_or_down]#верхняя (нечетная)
                 cod_of_lesson=cod_of_lesson[index_up_or_down+end_of_index_up_or_down:]
-
             index_type_of_lesson=cod_of_lesson.find('<b>')+3
             end_of_index_of_type=cod_of_lesson[index_type_of_lesson:].find('</b>')
             type_of_lesson=cod_of_lesson[index_type_of_lesson:index_type_of_lesson+end_of_index_of_type]#Л (или лр)
@@ -42,15 +40,30 @@ def schedule_of_teachers(*, link: str, teacher: str)->dict:
             index_of_adress=cod_of_lesson.find('–')
             end_of_index_of_adress=cod_of_lesson.find('</em>')
             adress=cod_of_lesson[index_of_adress:end_of_index_of_adress]#– Гастелло 15, ауд. 31-02
-
-            index_groups=cod_of_lesson.find('Группы:')+8
+            if 'Группы' in cod_of_lesson:
+                index_groups=cod_of_lesson.find('Группы:')+8
+            else:
+                index_groups = cod_of_lesson.find('Группа:') + 8
             cod_of_lesson=cod_of_lesson[index_groups:]
-            soup = BeautifulSoup(cod_of_lesson, 'lxml')
-            cod_of_groups=soup.find_all('a')
-            groups=[]#['1241', '1242', '1243', '1245', '7241']
+            if 'b' not in cod_of_lesson:
+                soup = BeautifulSoup(cod_of_lesson, 'lxml')
+                cod_of_groups=soup.find_all('a')
+                groups=[]#['1241', '1242', '1243', '1245', '7241']
+            else:
+                index_of_next=cod_of_lesson.find('b')
+                soup = BeautifulSoup(cod_of_lesson[:index_of_next-1], 'lxml')
+                cod_of_groups = soup.find_all('a')
+                groups = []  # ['1241', '1242', '1243', '1245', '7241']
             for group in cod_of_groups:
                 groups.append(group.text)
-            schedule_of_teacher[teacher, day_of_the_week, num_of_lesson]=[up_or_down,type_of_lesson,object, adress,groups]
+            if (up_or_down):
+                schedule_of_teacher[teacher, day_of_the_week, num_of_lesson, up_or_down] = [type_of_lesson, object, adress, groups]
+            else:
+                schedule_of_teacher[teacher, day_of_the_week, num_of_lesson, 'нижняя (четная)'] = [type_of_lesson, object, adress, groups]
+                schedule_of_teacher[teacher, day_of_the_week, num_of_lesson, 'верхняя (нечетная)'] = [type_of_lesson, object, adress, groups]
+            if '<div' in cod_of_lesson:
+                index_of_next=cod_of_lesson.find('<div')
+                cod_of_day='<h4>'+num_of_lesson+'</h4>'+cod_of_lesson[index_of_next:]
 
     return schedule_of_teacher
 def find_id_teachers(*, link: str):
@@ -73,10 +86,16 @@ def find_id_teachers(*, link: str):
                 start = block.find('"')
                 end = block.rfind('"')
                 teachers_id = block[start + 1:end]
-                teachers_id_from_14.append(teachers_id)
-    for teacher_id in teachers_id:
-        link_with_id='https://guap.ru/rasp/?p='+str(teacher_id)
-        #function
+                teachers_id_from_14.append((teachers_id,teachers_fio))
+    with open("shcedule.txt", 'w') as file:
+        for teacher_id, teachers_fio in teachers_id_from_14:
+            file.write(teachers_fio+'\n')
+            link_with_id='https://guap.ru/rasp/?p='+str(teacher_id)
+            schedule = schedule_of_teachers(link=link_with_id, teacher=teachers_fio)
+            for k,v in schedule.items():
+                file.write(f'День недели: {k[1]}, Чётность недели: {k[3]}, Номер пары: {k[2]}: Тип пары:{v[0]}, Предмет: {v[1]}, Аудитория: {v[2]}, Группы: {v[3]}\n')
+            file.write('\n')
+
 
 def write_teachers_from_14_in_file(*, link: str):
     responce = requests.get(link).text
@@ -93,9 +112,8 @@ def write_teachers_from_14_in_file(*, link: str):
                 file.write(surname)
 def main():
     #write_teachers_from_14_in_file(link="https://new.guap.ru/i01/k14#tab_k14_2")
-    #find_id_teachers(link="https://guap.ru/rasp/")
-    shedule=schedule_of_teachers(link='https://guap.ru/rasp/?p=' + '675', teacher='Яблоков')
-    print(shedule)
+    find_id_teachers(link="https://guap.ru/rasp/")
+    #shedule = schedule_of_teachers(link='https://guap.ru/rasp/?p=' + '675', teacher='Яблоков')
     #print(shedule)
     #675 - Яблоков
 if __name__=="__main__":
