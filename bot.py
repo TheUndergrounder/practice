@@ -39,8 +39,42 @@ async def cmd_prep(message: types.Message):
 
 @dp.message(F.text.lower() == "аудитории")
 async def cmd_audit(message: types.Message):
-    await message.reply("Расписание аудиторий")
-    
+    kb = [
+        [
+            types.KeyboardButton(text="Гастелло"),
+            types.KeyboardButton(text="Ленсовета"),
+            types.KeyboardButton(text="Большая Морская"),
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Выберите адрес"
+    )
+    await message.reply("Выберите адрес", reply_markup=keyboard)
+
+@dp.message(F.text.lower() == "гастелло")
+async def cmd_gastello(message: types.Message):
+    global mode, address
+    mode = "auditorium"
+    address = "Гастелло"
+    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+
+@dp.message(F.text.lower() == "ленсовета")
+async def cmd_lensoveta(message: types.Message):
+    global mode, address
+    mode = "auditorium"
+    address = "Ленсовета"
+    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+
+@dp.message(F.text.lower() == "большая морская")
+async def cmd_bm(message: types.Message):
+    global mode, address
+    mode = "auditorium"
+    address = "Большая Морская"
+    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+
+
 # Хэндлер на команду /test1
 @dp.message(Command("test1"))
 async def cmd_test1(message: types.Message):
