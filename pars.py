@@ -148,7 +148,6 @@ def schedule_of_audience():
                     num_of_lesson = cod_of_day[:index_lesson]  # 5 пара (16:40–18:10)
                     cod_of_lesson = cod_of_day[:index_h4_next]
                     up_or_down = None
-
                     if "title" in cod_of_lesson:
                         index_up_or_down = cod_of_lesson.find('title') + 7
                         end_of_index_up_or_down = cod_of_lesson[index_up_or_down:].find('"')
@@ -165,12 +164,28 @@ def schedule_of_audience():
                     end_of_index_of_object = cod_of_lesson.find('<em>')
                     object = cod_of_lesson[index_of_object:end_of_index_of_object]  # – Электроника
 
-
-                    index_of_prep = cod_of_lesson.find('Преподаватель')
-                    cod_of_lesson = cod_of_lesson[index_of_prep:]
-                    index_of_prep = cod_of_lesson.find('>')
-                    end_of_index_of_prep = cod_of_lesson.find('</a>')
-                    prep = cod_of_lesson[index_of_prep+1:end_of_index_of_prep]  # Бибарсов М.Р. - доцент, канд. техн. наук, доцент
+                    if 'Преподаватель' in cod_of_lesson:
+                        index_of_prep = cod_of_lesson.find('Преподаватель')
+                        cod_of_lesson = cod_of_lesson[index_of_prep:]
+                        index_of_prep = cod_of_lesson.find('>')
+                        end_of_index_of_prep = cod_of_lesson.find('</a>')
+                        prep = cod_of_lesson[index_of_prep+1:end_of_index_of_prep]  # Бибарсов М.Р. - доцент, канд. техн. наук, доцент
+                    else:
+                        index_of_prep = cod_of_lesson.find('Преподаватели')
+                        cod_of_lesson = cod_of_lesson[index_of_prep:]
+                        index_of_prep = cod_of_lesson.find('<')
+                        end_of_index_of_prep = cod_of_lesson.find('</span>')
+                        preps = cod_of_lesson[
+                        index_of_prep:end_of_index_of_prep]  # Бибарсов М.Р. - доцент, канд. техн. наук, доцент
+                        soup = BeautifulSoup(preps, 'lxml')
+                        preps=soup.find_all('a')
+                        prep=''
+                        for j in range(len(preps)-1):
+                            prep+=preps[j].text+'; '
+                        try:
+                            prep+=preps[-1].text
+                        except IndexError:
+                            prep=''
                     if 'Группы' in cod_of_lesson:
                         index_groups = cod_of_lesson.find('Группы:') + 8
                     else:
@@ -209,7 +224,6 @@ def main():
     write_teachers_from_14_in_file(link="https://new.guap.ru/i01/k14#tab_k14_2")
     find_id_teachers(link="https://guap.ru/rasp/")
     schedule_of_audience()
-
 
 if __name__=="__main__":
     main()
