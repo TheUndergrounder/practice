@@ -19,6 +19,23 @@ dp = Dispatcher()
 
 mode = "normal"
 address = ''
+day = ''
+teachers_fio = ''
+def update_day():
+    global day
+    try:
+        url = "https://guap.ru/rasp/"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'lxml')
+        day=soup.find('em').text[2:]
+        print(f"День обновлен: {day}")
+    except Exception as e:
+        print(f"Ошибка при обновлении дня: {e}")
+def run_scheduler():
+    schedule.every().day.at("00:00").do(update_day)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 def get_main_keyboard():
     kb = [
         [
@@ -31,7 +48,15 @@ def get_main_keyboard():
         resize_keyboard=True,
         input_field_placeholder="Выберите способ подачи"
     )
-
+def get_back_keyboard(mesage:str=''):
+    kb = [
+        [types.KeyboardButton(text="Назад")]
+    ]
+    return types.ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder=mesage+" или нажмите 'Назад'"*(mesage!='')
+    )
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer("Расписание", reply_markup=get_main_keyboard())
@@ -40,15 +65,7 @@ async def cmd_start(message: types.Message):
 async def cmd_prep(message: types.Message):
     global mode
     mode = "teacher"
-    kb = [
-        [types.KeyboardButton(text="Назад")]
-    ]
-    keyboard = types.ReplyKeyboardMarkup(
-        keyboard=kb,
-        resize_keyboard=True,
-        input_field_placeholder="Введите фамилию преподавателя или нажмите 'Назад'"
-    )
-    await message.reply("Введите фамилию преподавателя", reply_markup=keyboard)
+    await message.reply("Введите фамилию преподавателя", reply_markup=get_back_keyboard('Введите фамилию преподавателя'))
 @dp.message(F.text.lower() == "назад")
 async def cmd_back(message: types.Message):
     global mode
@@ -92,19 +109,40 @@ async def cmd_bm(message: types.Message):
     address = "Большая Морская"
     await message.reply("Введите номер аудитории или первые 2 цифры номера")
 
-
+@dp.message(F.text.lower() == "показать полное расписание")
+async def show_full_schedule(message: types.Message):
+    if mode=='full_schedule':
+        title = "Расписание преподавателя на <b><u>" + teachers_fio + "</u></b>\n"
+        reply = title+get_rasp(teachers_fio)
+        await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
 @dp.message(F.text)
-async def read_message(message: types.Message):
-    global mode
+async def choose_prep(message: types.Message):
+    global mode, day, teachers_fio
     if mode == "teacher":
         if message.text.lower() != "назад":
             teacher = get_name(message.text)
             if teacher == "":
                 await message.reply("Такой преподаватель не найден")
             else:
-                reply = "Расписание преподавателя <b><u>" + teacher + "</u></b>\n"
-                reply += get_rasp(teacher)
-                await message.reply(reply, parse_mode=ParseMode.HTML)
+                title = "Расписание преподавателя на сегодня <b><u>" + teacher + "</u></b>\n"
+                reply = get_rasp(teacher, day)
+                if reply=='':
+                    reply='Сегодня выходной!!'+'🥳'
+                else:
+                    reply=title+reply
+                kb = [
+                    [types.KeyboardButton(text="Назад"),
+                     types.KeyboardButton(text="Показать полное расписание")
+                     ]
+                ]
+                keyboard = types.ReplyKeyboardMarkup(
+                    keyboard=kb,
+                    resize_keyboard=True,
+                    input_field_placeholder='Выберите "полное расписание" или "назад"'
+                )
+                mode='full_schedule'
+                teachers_fio=teacher
+                await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=keyboard)
     else:
         await message.reply("Неизвестная команда")
 
