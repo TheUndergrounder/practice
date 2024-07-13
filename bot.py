@@ -39,8 +39,42 @@ async def cmd_prep(message: types.Message):
 
 @dp.message(F.text.lower() == "аудитории")
 async def cmd_audit(message: types.Message):
-    await message.reply("Расписание аудиторий")
-    
+    kb = [
+        [
+            types.KeyboardButton(text="Гастелло"),
+            types.KeyboardButton(text="Ленсовета"),
+            types.KeyboardButton(text="Большая Морская"),
+        ],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(
+        keyboard=kb,
+        resize_keyboard=True,
+        input_field_placeholder="Выберите адрес"
+    )
+    await message.reply("Выберите адрес", reply_markup=keyboard)
+
+@dp.message(F.text.lower() == "гастелло")
+async def cmd_gastello(message: types.Message):
+    global mode, address
+    mode = "auditorium"
+    address = "Гастелло"
+    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+
+@dp.message(F.text.lower() == "ленсовета")
+async def cmd_lensoveta(message: types.Message):
+    global mode, address
+    mode = "auditorium"
+    address = "Ленсовета"
+    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+
+@dp.message(F.text.lower() == "большая морская")
+async def cmd_bm(message: types.Message):
+    global mode, address
+    mode = "auditorium"
+    address = "Большая Морская"
+    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+
+
 # Хэндлер на команду /test1
 @dp.message(Command("test1"))
 async def cmd_test1(message: types.Message):
@@ -55,8 +89,8 @@ async def read_message(message: types.Message):
         if teacher=="":
             await message.reply("Такой преподаватель не найден")
         else:
-            reply="Расписание преподавателя " + teacher
-            for string in get_rasp(teacher):
+            reply="Расписание преподавателя <b><u>" + teacher+"</u></b>\n"
+            """for string in get_rasp(teacher):
                 string=string.replace("День недели:", "<b>📆")
                 string = string.replace(", Чётность недели: ", "</b>\n")
                 string = string.replace(", Номер пары: ", "\n▼")
@@ -66,7 +100,10 @@ async def read_message(message: types.Message):
                 string = string.replace("[", "")
                 string = string.replace("]", "")
                 string = string.replace("\'", "")
+                
                 reply+="\n"+string
+                """
+            reply+=get_rasp(teacher)
             await message.reply(reply,parse_mode=ParseMode.HTML)
     else:
         await message.reply("Неизвестная команда")
