@@ -9,7 +9,7 @@ def get_name(message):
     shcedule = load(f)
     teachers=shcedule.keys()
     for teacher in teachers:
-        if message.lower() in teacher.lower():
+        if teacher.lower().startswith(message.lower()):
             return teacher
     return ""
 def get_rasp(teacher):
