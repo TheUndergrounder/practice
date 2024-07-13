@@ -5,16 +5,16 @@ from aiogram.enums import ParseMode
 from aiogram.filters.command import Command
 from aiogram import F
 from aiogram import html
-from base import *
 #from config_reader import config
 from raspisanie import *
+import re
+
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
 # Объект бота
 bot = Bot(token="7265948579:AAGRZ1rwfn19i9KUYzukR7U8M5WfEoXT1ko")
 # Диспетчер
 dp = Dispatcher()
-
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     kb = [
@@ -75,11 +75,6 @@ async def cmd_bm(message: types.Message):
     await message.reply("Введите номер аудитории или первые 2 цифры номера")
 
 
-# Хэндлер на команду /test1
-@dp.message(Command("test1"))
-async def cmd_test1(message: types.Message):
-    await message.reply("Test 1")
-
 @dp.message(F.text)
 async def read_message(message: types.Message):
     global mode
@@ -109,6 +104,9 @@ async def read_message(message: types.Message):
         await message.reply("Неизвестная команда")
 
 async def main():
+    scheduler_thread = threading.Thread(target=run_scheduler)
+    scheduler_thread.start()
+    update_day()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

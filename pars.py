@@ -109,7 +109,6 @@ def write_teachers_from_14_in_file(*, link: str):
                 teachers_fio = teachers_fio.split()
                 surname = f'{teachers_fio[0]} {teachers_fio[1][0]}.{teachers_fio[2][0]}.\n'
                 file.write(surname)
-
 def schedule_of_audience():
     responce = requests.get('https://guap.ru/rasp/').text
     soup = BeautifulSoup(responce, 'lxml')

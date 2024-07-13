@@ -1,4 +1,9 @@
 from json import *
+import schedule
+import time
+import requests
+from bs4 import BeautifulSoup
+import threading
 def get_name(message):
     f = open("shcedule.json", encoding="utf8")
     shcedule = load(f)
@@ -20,12 +25,20 @@ def get_rasp(teacher):
                 text+=" ".join(i)+" "
         text+="\n"
     return text
-    """rasp=open("shcedule.txt").readlines()
-    begin=0
-    while rasp[begin]!=teacher:
-        begin+=1
-    end=begin+1
-    while end<len(rasp) and rasp[end]!="" and rasp[end]!="\n":
-        end+=1
-    return rasp[begin+1: end]
-    """
+
+day=''
+def update_day():
+    global day
+    try:
+        url = "https://guap.ru/rasp/"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'lxml')
+        day=soup.find('em').text[2:]
+        print(f"День обновлен: {day}")
+    except Exception as e:
+        print(f"Ошибка при обновлении дня: {e}")
+def run_scheduler():
+    schedule.every().day.at("00:00").do(update_day)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
