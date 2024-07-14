@@ -3,13 +3,11 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
 from aiogram.filters.command import Command
-#поиск
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent, ReplyKeyboardRemove
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from aiogram import F
 from aiogram import html
-#from config_reader import config
 from raspisanie import *
 
 # Включаем логирование, чтобы не пропустить важные сообщения
@@ -25,13 +23,7 @@ address = ''
 day = ''
 teachers_fio = ''
 audience=''
-def load_teachers():
-    with open('teachers_from_14.txt', 'r', encoding='1251') as file:
-        return file.read().split('\n')
-
 teachers_list = load_teachers()
-def search_teachers(query):
-    return [teacher for teacher in teachers_list if teacher.lower().startswith(query.lower())]
 
 def update_day():
     global day
@@ -51,24 +43,19 @@ def run_scheduler():
 def get_main_keyboard():
     kb = [
         [
-            types.KeyboardButton(text="Преподаватели"),
-            types.KeyboardButton(text="Аудитории")
+            InlineKeyboardButton(text="Преподаватели", switch_inline_query_current_chat=""),
+            InlineKeyboardButton(text="Аудитории", callback_data="auditoriums")
         ],
     ]
-    return types.ReplyKeyboardMarkup(
+    return InlineKeyboardMarkup(inline_keyboard=kb), ReplyKeyboardRemove()
+def get_back_keyboard(message:str=''):
+    kb = [[KeyboardButton(text="Назад")]]
+    return ReplyKeyboardMarkup(
         keyboard=kb,
         resize_keyboard=True,
-        input_field_placeholder="Выберите тип расписания"
+        input_field_placeholder=message+" или нажмите 'Назад'"*(message!='')
     )
-def get_back_keyboard(mesage:str=''):
-    kb = [
-        [types.KeyboardButton(text="Назад")]
-    ]
-    return types.ReplyKeyboardMarkup(
-        keyboard=kb,
-        resize_keyboard=True,
-        input_field_placeholder=mesage+" или нажмите 'Назад'"*(mesage!='')
-    )
+
 @dp.inline_query()
 async def inline_query_handler(query: InlineQuery):
     if len(query.query) < 1:
@@ -94,7 +81,10 @@ async def handle_inline_result(message: types.Message):
     await show_teacher_schedule(message, teacher)
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("Главная страница", reply_markup=get_main_keyboard())
+    keyboard, remove_keyboard = get_main_keyboard()
+    await message.answer("Выберите действие", reply_markup=remove_keyboard)
+    await message.answer("Главная страница", reply_markup=keyboard)
+
 
 
 @dp.message(F.text.lower() == "преподаватели")
@@ -116,45 +106,32 @@ async def cmd_prep(message: types.Message):
 async def cmd_back(message: types.Message):
     global mode
     mode = "normal"
-    await message.reply("Выберите действие", reply_markup=get_main_keyboard())
+    keyboard, remove_keyboard = get_main_keyboard()
+    await message.answer("Выберите действие", reply_markup=remove_keyboard)
+    await message.answer("Главная страница", reply_markup=keyboard)
 
-@dp.message(F.text.lower() == "аудитории")
-async def cmd_audit(message: types.Message):
+@dp.callback_query(F.data == "auditoriums")
+async def process_auditoriums(callback_query: types.CallbackQuery):
     kb = [
         [
-            types.KeyboardButton(text="Гастелло 15"),
-            types.KeyboardButton(text="Ленсовета 14"),
-            types.KeyboardButton(text="Б. Морская 67"),
-            types.KeyboardButton(text="Назад"),
+            InlineKeyboardButton(text="Гастелло 15", callback_data="address:Гастелло 15"),
+            InlineKeyboardButton(text="Ленсовета 14", callback_data="address:Ленсовета 14"),
         ],
+        [
+            InlineKeyboardButton(text="Б. Морская 67", callback_data="address:Б. Морская 67"),
+        ],
+        [InlineKeyboardButton(text="Назад", callback_data="back_to_main")]
     ]
-    keyboard = types.ReplyKeyboardMarkup(
-        keyboard=kb,
-        resize_keyboard=True,
-        input_field_placeholder="Выберите адрес или нажмите 'Назад'"
-    )
-    await message.reply("Выберите адрес", reply_markup=keyboard)
-
-@dp.message(F.text.lower() == "гастелло 15")
-async def cmd_gastello(message: types.Message):
+    keyboard = InlineKeyboardMarkup(inline_keyboard=kb)
+    await callback_query.message.edit_text("Выберите адрес", reply_markup=keyboard)
+    await callback_query.answer()
+@dp.callback_query(F.data.startswith("address:"))
+async def process_address(callback_query: types.CallbackQuery):
     global mode, address
     mode = "auditorium"
-    address = "Гастелло 15"
-    await message.reply("Введите номер аудитории", reply_markup=get_back_keyboard())
-
-@dp.message(F.text.lower() == "ленсовета 14")
-async def cmd_lensoveta(message: types.Message):
-    global mode, address
-    mode = "auditorium"
-    address = "Ленсовета 14"
-    await message.reply("Введите номер аудитории", reply_markup=get_back_keyboard())
-
-@dp.message(F.text.lower() == "б. морская 67")
-async def cmd_bm(message: types.Message):
-    global mode, address
-    mode = "auditorium"
-    address = "Б. Морская 67"
-    await message.reply("Введите номер аудитории", reply_markup=get_back_keyboard())
+    address = callback_query.data.split(":")[1]
+    await callback_query.message.edit_text(f"Введите номер аудитории для {address}")
+    await callback_query.answer()
 
 @dp.message(F.text.lower() == "показать полное расписание")
 async def show_full_schedule(message: types.Message):
@@ -187,11 +164,10 @@ async def show_teacher_schedule(message: types.Message, teacher: str):
     else:
         reply = title + reply
     kb = [
-        [types.KeyboardButton(text="Назад"),
-         types.KeyboardButton(text="Показать полное расписание")
-         ]
+        [KeyboardButton(text="Назад"),
+         KeyboardButton(text="Показать полное расписание")]
     ]
-    keyboard = types.ReplyKeyboardMarkup(
+    keyboard = ReplyKeyboardMarkup(
         keyboard=kb,
         resize_keyboard=True,
         input_field_placeholder='Выберите "полное расписание" или "назад"'
@@ -199,6 +175,7 @@ async def show_teacher_schedule(message: types.Message, teacher: str):
     mode = 'full_schedule_prep'
     teachers_fio = teacher
     await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+
 @dp.message(F.text)
 async def choose_prep(message: types.Message):
     global mode, day, teachers_fio, audience
@@ -241,6 +218,8 @@ async def choose_prep(message: types.Message):
 async def main():
     threading.Thread(target=run_scheduler).start()
     update_day()
+    bot_info = await bot.get_me()
+    print(f"Бот запущен. Username: @{bot_info.username}")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
