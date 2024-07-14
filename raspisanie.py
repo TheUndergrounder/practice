@@ -71,3 +71,9 @@ def get_rasp_audit(korpus:str, audience:str, today=None):
         if text=='':
             return 'Сегодня у аудитории выходной'
     return text
+def load_teachers():
+    with open('teachers_from_14.txt', 'r', encoding='1251') as file:
+        return file.read().split('\n')
+teachers_list = load_teachers()
+def search_teachers(query):
+    return [teacher for teacher in teachers_list if teacher.lower().startswith(query.lower())]
