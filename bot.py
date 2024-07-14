@@ -3,6 +3,8 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
 from aiogram.filters.command import Command
+#поиск
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram import F
 from aiogram import html
 #from config_reader import config
@@ -46,7 +48,7 @@ def get_main_keyboard():
     return types.ReplyKeyboardMarkup(
         keyboard=kb,
         resize_keyboard=True,
-        input_field_placeholder="Выберите способ подачи"
+        input_field_placeholder="Выберите тип расписания"
     )
 def get_back_keyboard(mesage:str=''):
     kb = [
@@ -59,7 +61,7 @@ def get_back_keyboard(mesage:str=''):
     )
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    await message.answer("Расписание", reply_markup=get_main_keyboard())
+    await message.answer("Главная страница", reply_markup=get_main_keyboard())
 
 @dp.message(F.text.lower() == "преподаватели")
 async def cmd_prep(message: types.Message):
