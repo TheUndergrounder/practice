@@ -7,7 +7,6 @@ from aiogram import F
 from aiogram import html
 #from config_reader import config
 from raspisanie import *
-import re
 
 # Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +20,7 @@ mode = "normal"
 address = ''
 day = ''
 teachers_fio = ''
+audience=''
 def update_day():
     global day
     try:
@@ -79,70 +79,102 @@ async def cmd_audit(message: types.Message):
             types.KeyboardButton(text="Гастелло 15"),
             types.KeyboardButton(text="Ленсовета 14"),
             types.KeyboardButton(text="Б. Морская 67"),
+            types.KeyboardButton(text="Назад"),
         ],
     ]
     keyboard = types.ReplyKeyboardMarkup(
         keyboard=kb,
         resize_keyboard=True,
-        input_field_placeholder="Выберите адрес"
+        input_field_placeholder="Выберите адрес или нажмите 'Назад'"
     )
     await message.reply("Выберите адрес", reply_markup=keyboard)
 
-@dp.message(F.text.lower() == "гастелло")
+@dp.message(F.text.lower() == "гастелло 15")
 async def cmd_gastello(message: types.Message):
     global mode, address
     mode = "auditorium"
-    address = "Гастелло"
-    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+    address = "Гастелло 15"
+    await message.reply("Введите номер аудитории", reply_markup=get_back_keyboard())
 
-@dp.message(F.text.lower() == "ленсовета")
+@dp.message(F.text.lower() == "ленсовета 14")
 async def cmd_lensoveta(message: types.Message):
     global mode, address
     mode = "auditorium"
-    address = "Ленсовета"
-    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+    address = "Ленсовета 14"
+    await message.reply("Введите номер аудитории", reply_markup=get_back_keyboard())
 
-@dp.message(F.text.lower() == "большая морская")
+@dp.message(F.text.lower() == "б. морская 67")
 async def cmd_bm(message: types.Message):
     global mode, address
     mode = "auditorium"
-    address = "Большая Морская"
-    await message.reply("Введите номер аудитории или первые 2 цифры номера")
+    address = "Б. Морская 67"
+    await message.reply("Введите номер аудитории", reply_markup=get_back_keyboard())
 
 @dp.message(F.text.lower() == "показать полное расписание")
 async def show_full_schedule(message: types.Message):
-    if mode=='full_schedule':
-        title = "Расписание преподавателя на <b><u>" + teachers_fio + "</u></b>\n"
+    if mode=='full_schedule_prep':
+        title = "Расписание преподавателя <b><u>" + teachers_fio + "</u></b>\n"
         reply = title+get_rasp(teachers_fio)
         await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
+    elif mode=='full_schedule_audit':
+        title = "Расписание <b><u>" + audience + "</u></b>\n"
+        reply = title + get_rasp_audit(address, audience)
+        print(len(reply))
+        print(reply)
+        if len(reply)>4095:
+            half=reply.find('<i>Четверг')
+            await message.reply(reply[:half], parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
+            await message.reply(reply[half:], parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
+        else:
+            await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
 @dp.message(F.text)
 async def choose_prep(message: types.Message):
-    global mode, day, teachers_fio
+    global mode, day, teachers_fio, audience
     if mode == "teacher":
-        if message.text.lower() != "назад":
-            teacher = get_name(message.text)
-            if teacher == "":
-                await message.reply("Такой преподаватель не найден")
+        teacher = get_name(message.text)
+        if teacher == "":
+            await message.reply("Такой преподаватель не найден")
+        else:
+            title = "Расписание преподавателя на сегодня <b><u>" + teacher + "</u></b>\n"
+            reply = get_rasp(teacher, day)
+            if reply=='':
+                reply='Сегодня выходной!!'+'🥳'
             else:
-                title = "Расписание преподавателя на сегодня <b><u>" + teacher + "</u></b>\n"
-                reply = get_rasp(teacher, day)
-                if reply=='':
-                    reply='Сегодня выходной!!'+'🥳'
-                else:
-                    reply=title+reply
-                kb = [
-                    [types.KeyboardButton(text="Назад"),
-                     types.KeyboardButton(text="Показать полное расписание")
-                     ]
-                ]
-                keyboard = types.ReplyKeyboardMarkup(
-                    keyboard=kb,
-                    resize_keyboard=True,
-                    input_field_placeholder='Выберите "полное расписание" или "назад"'
-                )
-                mode='full_schedule'
-                teachers_fio=teacher
-                await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+                reply=title+reply
+            kb = [
+                [types.KeyboardButton(text="Назад"),
+                 types.KeyboardButton(text="Показать полное расписание")
+                 ]
+            ]
+            keyboard = types.ReplyKeyboardMarkup(
+                keyboard=kb,
+                resize_keyboard=True,
+                input_field_placeholder='Выберите "полное расписание" или "назад"'
+            )
+            mode='full_schedule_prep'
+            teachers_fio=teacher
+            await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=keyboard)
+    elif mode == 'auditorium' or mode=='full_schedule_audit':
+        title = "Расписание <b><u>" + message.text + "</u></b> на сегодня\n"
+        reply = get_rasp_audit(korpus=address, audience=message.text, today=day)
+        if reply == '':
+            reply = 'такой аудитории не найдено'
+            await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
+        else:
+            reply = title + reply
+            kb = [
+                [types.KeyboardButton(text="Назад"),
+                 types.KeyboardButton(text="Показать полное расписание")
+                 ]
+            ]
+            keyboard = types.ReplyKeyboardMarkup(
+                keyboard=kb,
+                resize_keyboard=True,
+                input_field_placeholder='Выберите "полное расписание" или "назад"'
+            )
+            audience=message.text
+            mode="full_schedule_audit"
+            await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=keyboard)
     else:
         await message.reply("Неизвестная команда")
 
