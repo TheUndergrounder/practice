@@ -82,13 +82,14 @@ def find_id_teachers(*, link: str):
             teachers_id=block[start+1:end]
             teachers_fio=teachers_option_value.text.split()
             teachers_fio=teachers_fio[0]+' '+teachers_fio[1]
+            if teachers_fio=='Док Цихон':
+                teachers_fio='Док Цихон Г.Ф.Э.'
             if teachers_fio in teachers_from_14:
                 block = (str(teachers_option_value))
                 start = block.find('"')
                 end = block.rfind('"')
                 teachers_id = block[start + 1:end]
                 teachers_id_from_14.append((teachers_id,teachers_fio))
-
     schedule={}
     for teacher_id, teachers_fio in teachers_id_from_14:
         link_with_id='https://guap.ru/rasp/?p='+str(teacher_id)
@@ -220,9 +221,9 @@ def schedule_of_audience():
         file.write(json.dumps(full_schedule, indent=4, ensure_ascii=False))
 
 def main():
-    write_teachers_from_14_in_file(link="https://new.guap.ru/i01/k14#tab_k14_2")
+    #write_teachers_from_14_in_file(link="https://new.guap.ru/i01/k14#tab_k14_2")
     find_id_teachers(link="https://guap.ru/rasp/")
-    schedule_of_audience()
+    #schedule_of_audience()
 
 if __name__=="__main__":
     main()

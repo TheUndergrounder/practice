@@ -142,7 +142,8 @@ async def show_full_schedule(message: types.Message):
         title = "Расписание <b><u>" + audience + "</u></b>\n"
         reply = title + get_rasp_audit(address, audience)
         if len(reply)>4095:
-            half=reply.find('<i>Четверг')
+            half=reply.find('<b><i>Чт')
+            print(reply, len(reply), len(reply[:half]), len(reply[half:]))
             await message.reply(reply[:half], parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
             await message.reply(reply[half:], parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
         else:
@@ -192,8 +193,10 @@ async def choose_prep(message: types.Message):
         title = "Расписание <b><u>" + message.text + "</u></b> на сегодня\n"
         reply = get_rasp_audit(korpus=address, audience=message.text, today=day)
         if reply == '':
-            reply = 'такой аудитории не найдено'
+            reply = 'Аудитории, к сожалению, не существует'
+            await message.answer_sticker(r'CAACAgIAAxkBAAEG6b5mlTydqVqKBzx6ucCpoTEtn_2DWwACMgADlb9JMp-D9IETtGgoNQQ')
             await message.reply(reply, parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
+
         else:
             reply = title + reply
             kb = [
