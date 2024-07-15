@@ -58,9 +58,8 @@ def get_back_keyboard(message:str=''):
 
 @dp.inline_query()
 async def inline_query_handler(query: InlineQuery):
-    if len(query.query) < 1:
+    if len(query.query)<1:
         return
-
     results = []
     matching_teachers = search_teachers(query.query)
 
@@ -142,8 +141,6 @@ async def show_full_schedule(message: types.Message):
     elif mode=='full_schedule_audit':
         title = "Расписание <b><u>" + audience + "</u></b>\n"
         reply = title + get_rasp_audit(address, audience)
-        print(len(reply))
-        print(reply)
         if len(reply)>4095:
             half=reply.find('<i>Четверг')
             await message.reply(reply[:half], parse_mode=ParseMode.HTML, reply_markup=get_back_keyboard())
@@ -218,9 +215,13 @@ async def choose_prep(message: types.Message):
 async def main():
     threading.Thread(target=run_scheduler).start()
     update_day()
+    await bot.delete_webhook(drop_pending_updates=True)
+
     bot_info = await bot.get_me()
     print(f"Бот запущен. Username: @{bot_info.username}")
-    await dp.start_polling(bot)
+
+    # Запускаем поллинг с игнорированием ожидающих обновлений
+    await dp.start_polling(bot, drop_pending_updates=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
